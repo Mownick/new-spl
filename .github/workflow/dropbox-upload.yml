@@ -1,0 +1,39 @@
+name: Process and Upload to Dropbox
+
+on:
+  push:
+    paths:
+      - '**.tar.gz'
+      - '**.tgz'
+      - '**.tar'
+
+jobs:
+  process-and-upload:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install dropbox requests tqdm
+        
+    - name: Find changed files
+      id: changed-files
+      uses: tj-actions/changed-files@v34
+      with:
+        separator: ','
+        
+    - name: Process and upload to Dropbox
+      env:
+        DROPBOX_ACCESS_TOKEN: ${{ secrets.DROPBOX_ACCESS_TOKEN }}
+        DROPBOX_FILE_PATH: ${{ secrets.DROPBOX_FILE_PATH || '/Bots_V3_splunkapps.tar' }}
+      run: |
+        python upload_to_dropbox.py "${{ steps.changed-files.outputs.all_changed_files }}" "$DROPBOX_FILE_PATH"
