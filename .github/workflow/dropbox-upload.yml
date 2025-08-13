@@ -3,9 +3,9 @@ name: Process and Upload to Dropbox
 on:
   push:
     paths:
-      - '**.tar.gz'
-      - '**.tgz'
-      - '**.tar'
+      - '**/*.tar.gz'
+      - '**/*.tgz'
+      - '**/*.tar'
 
 jobs:
   process-and-upload:
@@ -14,6 +14,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
+      with:
+        fetch-depth: 0  # Important for changed-files detection
       
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -30,10 +32,19 @@ jobs:
       uses: tj-actions/changed-files@v34
       with:
         separator: ','
+        since_last_remote_commit: 'true'
+        
+    - name: Debug changed files
+      run: |
+        echo "Changed files: ${{ steps.changed-files.outputs.all_changed_files }}"
         
     - name: Process and upload to Dropbox
       env:
         DROPBOX_ACCESS_TOKEN: ${{ secrets.DROPBOX_ACCESS_TOKEN }}
         DROPBOX_FILE_PATH: ${{ secrets.DROPBOX_FILE_PATH || '/Bots_V3_splunkapps.tar' }}
       run: |
+        if [ -z "${{ steps.changed-files.outputs.all_changed_files }}" ]; then
+          echo "No matching files changed"
+          exit 0
+        fi
         python upload_to_dropbox.py "${{ steps.changed-files.outputs.all_changed_files }}" "$DROPBOX_FILE_PATH"
